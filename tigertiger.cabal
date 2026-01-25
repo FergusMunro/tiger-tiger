@@ -52,17 +52,14 @@ extra-doc-files:    CHANGELOG.md
 -- extra-source-files:
 
 common warnings
-    ghc-options: -Wall
 
 executable tigertiger
-    -- Import common warning flags.
     import:           warnings
 
-    -- .hs or .lhs file containing the Main module.
     main-is:          Main.hs
 
     -- Modules included in this executable, other than Main.
-    -- other-modules:
+    other-modules: World, Entities, Draw
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -71,7 +68,10 @@ executable tigertiger
     build-depends:    base ^>=4.18.3.0, gloss
 
     -- Directories containing source files.
-    hs-source-dirs:   app
+    hs-source-dirs:   src
+                      src/modules
 
     -- Base language which the package is written in.
     default-language: Haskell2010
+
+    ghc-options: -threaded
