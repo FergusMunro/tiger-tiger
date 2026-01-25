@@ -29,7 +29,7 @@ data MenuState = MenuState {selected :: Int, buttons :: [Button]}
 
 data GameState = GameState
   { player :: Player,
-    enemies :: [Enemies],
+    enemies :: [Enemy],
     paused :: Bool
   }
 
@@ -40,9 +40,8 @@ background = black
 
 drawGame :: SpriteSheet -> State -> Picture
 -- draw game
-drawGame ss (Game g) = draw ss (player g)
+drawGame ss (Game g) = Pictures $ draw ss (player g) : map (draw ss) (enemies g)
 -- draw menu
-
 drawGame ss (Menu m) = drawnButtons
   where
     drawnButtons = Pictures (drawButtons (selected m) (buttons m))
@@ -53,18 +52,19 @@ drawGame ss (Menu m) = drawnButtons
     drawButtons _ [] = []
 
 inputs :: Event -> State -> State
--- game events
+---- game events -----------------------
 -- directional keys down
 inputs (EventKey (Char 'w') Down _ _) (Game g) = Game $ g {player = directUp (player g)}
 inputs (EventKey (Char 's') Down _ _) (Game g) = Game $ g {player = directDown (player g)}
 inputs (EventKey (Char 'a') Down _ _) (Game g) = Game $ g {player = directLeft (player g)}
 inputs (EventKey (Char 'd') Down _ _) (Game g) = Game $ g {player = directRight (player g)}
+inputs (EventKey (SpecialKey KeySpace) Down _ _) (Game g) = Game $ g {player = extend (player g)}
 -- directional keys up
 inputs (EventKey (Char 'w') Up _ _) (Game g) = Game $ g {player = directDown (player g)}
 inputs (EventKey (Char 's') Up _ _) (Game g) = Game $ g {player = directUp (player g)}
 inputs (EventKey (Char 'a') Up _ _) (Game g) = Game $ g {player = directRight (player g)}
 inputs (EventKey (Char 'd') Up _ _) (Game g) = Game $ g {player = directLeft (player g)}
--- menu events
+---- menu events -----------------------
 inputs (EventKey (Char 's') Down _ _) (Menu m) = Menu $ m {selected = (selected m + 1) `mod` length (buttons m)}
 inputs (EventKey (Char 'w') Down _ _) (Menu m) = Menu $ m {selected = (selected m - 1) `mod` length (buttons m)}
 inputs (EventKey (SpecialKey KeyEnter) Down _ _) (Menu m) = effect pressed (Menu m)
@@ -73,5 +73,10 @@ inputs (EventKey (SpecialKey KeyEnter) Down _ _) (Menu m) = effect pressed (Menu
 inputs _ s = s
 
 step :: Float -> State -> State
-step t (Game g) = Game $ g {player = playerMovement (player g)}
-step t s = s
+step _ (Game g) =
+  Game $
+    g
+      { player = (playerMisc . playerMovement) (player g),
+        enemies = map (updateEnemyPos (player g)) (enemies g)
+      }
+step _ s = s
