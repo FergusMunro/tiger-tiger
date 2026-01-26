@@ -76,7 +76,15 @@ step :: Float -> State -> State
 step _ (Game g) =
   Game $
     g
-      { player = (playerMisc . playerMovement) (player g),
+      { player = finalPlayer,
         enemies = map (updateEnemyPos (player g)) (enemies g)
       }
+  where
+    movedPlayer = (playerMisc . playerMovement) (player g)
+    -- handle collisions
+    playerDamaged = any (enemyCollision movedPlayer) (enemies g)
+    finalPlayer =
+      if playerDamaged
+        then damagePlayer movedPlayer
+        else movedPlayer
 step _ s = s
