@@ -1,5 +1,6 @@
-module Entities (Player, Enemy, startingPlayer, startingEnemies, playerMovement, playerMisc, extend, directDown, directLeft, directUp, directRight, updateEnemyPos, enemyCollision, damagePlayer) where
+module Entities (Player, Enemy, startingPlayer, startingEnemies, playerMovement, playerMisc, extend, directDown, directLeft, directUp, directRight, updateEnemyPos, damagePlayer, enemyAttacked, damageEnemy) where
 
+import Collision
 import Draw
 import Graphics.Gloss
 
@@ -8,13 +9,26 @@ import Graphics.Gloss
 data Player = Player {x :: Float, y :: Float, hp :: Int, direction :: Direction, anchor :: Anchor, pDamageState :: DamageState}
 
 instance Draw Player where
-  draw ss p = case pDamageState p of
-    Invulnerable _ ->
-      Translate (x p) (y p) $
-        Pictures [Scale 2.5 2.5 $ playerSprite ss, Color blue $ rectangleWire playerWidth playerHeight, Scale 2.5 2.5 $ draw ss (anchor p)]
-    Vulnerable ->
-      Translate (x p) (y p) $
-        Pictures [Scale 2.5 2.5 $ playerSprite ss, Color red $ rectangleWire playerWidth playerHeight, Scale 2.5 2.5 $ draw ss (anchor p)]
+  draw ss p =
+    Translate (x p) (y p) $
+      Pictures [Scale 2.5 2.5 $ playerSprite ss, Color c $ rectangleWire playerWidth playerHeight, draw ss (anchor p)]
+    where
+      c = case pDamageState p of
+        Vulnerable -> red
+        Invulnerable _ -> blue
+
+instance Shape Player where
+  getCoordinates p =
+    [ (x' - w, y' + h),
+      (x' + w, y' + h),
+      (x' + w, y' - h),
+      (x' - w, y' - h)
+    ]
+    where
+      x' = x p
+      y' = y p
+      w = playerWidth / 2
+      h = playerHeight / 2
 
 startingPlayer :: Player
 startingPlayer = Player 0 0 0 (Direction 0 0) Retracted Vulnerable
@@ -34,23 +48,58 @@ playerMisc p = p {anchor = a, pDamageState = updateDamageState (pDamageState p)}
   where
     a = case anchor p of
       Retracted -> Retracted
-      Extended 30 _ -> Retracted
-      Extended i d -> Extended (i + 1) d
+      Extended i d ->
+        if i == anchorExtendedTime
+          then Retracted
+          else Extended (i + 1) d
 
 -- Anchor Code
 
 data Anchor = Retracted | Extended Int Direction
 
+getAnchorLength :: (Num a) => Anchor -> a
+getAnchorLength (Extended x _) = fromIntegral $ 35 * min (15 - abs (x - 15)) 12
+getAnchorLength _ = 0
+
 instance Draw Anchor where
   draw _ Retracted = Blank
-  draw _ (Extended x d) = Color blue $ Rotate (directionToAngle d) $ Translate ((length + playerWidth) / 2) 0 $ rectangleWire length 7
+  draw _ (Extended x d) =
+    Color blue $
+      Rotate angle $
+        Translate ((length + playerWidth) / 2) 0 $
+          rectangleWire length anchorHeight
     where
-      length = fromIntegral $ 15 * min (15 - abs (x - 15)) 12
+      length = getAnchorLength (Extended x d)
+      angle = 360 - directionToAngle d
+
+data AnchorPos = AnchorPos Anchor Coordinate
+
+instance Shape AnchorPos where
+  getCoordinates (AnchorPos Retracted _) = []
+  getCoordinates (AnchorPos (Extended l d) (x, y)) = map (f . rotate2d angle) coords
+    where
+      angle = directionToAngle d
+      coords =
+        [ (x' - w, y' + h),
+          (x' + w, y' + h),
+          (x' + w, y' - h),
+          (x' - w, y' - h)
+        ]
+      w = getAnchorLength (Extended l d) / 2
+      h = anchorHeight / 2
+      x' = w + playerWidth / 2
+      y' = 0
+      f (a, b) = (a + x, b + y)
 
 extend :: Player -> Player
 extend p = case anchor p of
   Retracted -> p {anchor = Extended 0 (direction p)}
   Extended _ _ -> p
+
+enemyAttacked :: Player -> Enemy -> Bool
+enemyAttacked p e = case anchor p of
+  Retracted -> False
+  a -> areIntersecting (AnchorPos a (x p, y p)) e
 
 -- damageCode
 data DamageState = Vulnerable | Invulnerable Int
@@ -61,7 +110,14 @@ updateDamageState (Invulnerable x) = Invulnerable (x - 1)
 updateDamageState d = d
 
 damagePlayer :: Player -> Player
-damagePlayer p = p {hp = hp p - 1, pDamageState = Invulnerable playerDamageTime}
+damagePlayer p = case pDamageState p of
+  Vulnerable -> p {hp = hp p - 1, pDamageState = Invulnerable playerDamageTime}
+  Invulnerable _ -> p
+
+damageEnemy :: Enemy -> Enemy
+damageEnemy e = case eDamageState e of
+  Vulnerable -> e {health = health e - 1, eDamageState = Invulnerable enemyDamageTime}
+  Invulnerable _ -> e
 
 -- enemy Code
 
@@ -79,23 +135,29 @@ updateEnemyPos p e = case enemyType e of
 
 instance Draw Enemy where
   draw ss e = case enemyType e of
-    Shark -> Translate (xPos e) (yPos e) $ Pictures [Scale 3 3 $ sharkSprite ss, Color red $ rectangleWire sharkWidth sharkHeight]
-    Jellyfish -> Translate (xPos e) (yPos e) $ Pictures [Scale 3 3 $ jellyFishSprite ss, Color red $ rectangleWire jellyfishWidth jellyfishHeight]
-
-enemyCollision :: Player -> Enemy -> Bool
-enemyCollision p e = case pDamageState p of
-  Vulnerable ->
-    case enemyType e of
-      Shark ->
-        (xdiff <= (playerWidth + sharkWidth) / 2)
-          && (ydiff <= (playerHeight + sharkHeight) / 2)
-      Jellyfish ->
-        (xdiff <= (playerWidth + jellyfishWidth) / 2)
-          && (ydiff <= (playerHeight + jellyfishHeight) / 2)
+    Shark -> Translate (xPos e) (yPos e) $ Pictures [Scale 3 3 $ sharkSprite ss, Color c $ rectangleWire sharkWidth sharkHeight]
+    Jellyfish -> Translate (xPos e) (yPos e) $ Pictures [Scale 3 3 $ jellyFishSprite ss, Color c $ rectangleWire jellyfishWidth jellyfishHeight]
     where
-      xdiff = abs $ x p - xPos e
-      ydiff = abs $ y p - yPos e
-  _ -> False
+      c = case eDamageState e of
+        Vulnerable -> red
+        Invulnerable _ -> blue
+
+instance Shape Enemy where
+  getCoordinates e =
+    [ (x' - w, y' + h),
+      (x' + w, y' + h),
+      (x' + w, y' - h),
+      (x' - w, y' - h)
+    ]
+    where
+      x' = xPos e
+      y' = yPos e
+      w = case enemyType e of
+        Jellyfish -> jellyfishWidth / 2
+        Shark -> sharkWidth / 2
+      h = case enemyType e of
+        Jellyfish -> jellyfishHeight / 2
+        Shark -> sharkHeight / 2
 
 startingEnemies :: [Enemy]
 startingEnemies =
@@ -143,4 +205,14 @@ sharkWidth = 144
 sharkHeight :: Float
 sharkHeight = 45
 
+playerDamageTime :: Int
 playerDamageTime = 100
+
+enemyDamageTime :: Int
+enemyDamageTime = 30
+
+anchorExtendedTime :: Int
+anchorExtendedTime = 30
+
+anchorHeight :: Float
+anchorHeight = 20

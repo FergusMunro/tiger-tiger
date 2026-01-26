@@ -59,7 +59,7 @@ executable tigertiger
     main-is:          Main.hs
 
     -- Modules included in this executable, other than Main.
-    other-modules: World, Entities, Draw
+    other-modules: World, Entities, Draw, Collision
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

@@ -1,5 +1,6 @@
 module World (background, startingWorld, drawGame, inputs, step) where
 
+import Collision
 import Draw
 import Entities
 import Graphics.Gloss
@@ -77,14 +78,20 @@ step _ (Game g) =
   Game $
     g
       { player = finalPlayer,
-        enemies = map (updateEnemyPos (player g)) (enemies g)
+        enemies = finalEnemies
       }
   where
+    -- update player
     movedPlayer = (playerMisc . playerMovement) (player g)
-    -- handle collisions
-    playerDamaged = any (enemyCollision movedPlayer) (enemies g)
+    playerDamaged = any (areIntersecting movedPlayer) (enemies g)
     finalPlayer =
       if playerDamaged
         then damagePlayer movedPlayer
         else movedPlayer
+    -- handle anchor collisions
+    movedEnemies = map (updateEnemyPos (player g)) (enemies g)
+    finalEnemies = map f movedEnemies
+    f e
+      | enemyAttacked finalPlayer e = damageEnemy e
+      | otherwise = e
 step _ s = s
