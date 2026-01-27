@@ -1,4 +1,4 @@
-module Entities (Player, Enemy, startingPlayer, startingEnemies, playerMovement, playerMisc, extend, directDown, directLeft, directUp, directRight, updateEnemyPos, damagePlayer, enemyAttacked, damageEnemy, enemyMisc, enemyAlive, playerAlive, getScore) where
+module Entities (Player, Enemy, startingPlayer, startingEnemies, playerMovement, playerMisc, extend, directDown, directLeft, directUp, directRight, updateEnemyPos, damagePlayer, enemyAttacked, damageEnemy, enemyMisc, enemyAlive, getScore, getHealth) where
 
 import Collision
 import Draw
@@ -33,6 +33,9 @@ instance Shape Player where
 
 startingPlayer :: Player
 startingPlayer = Player 0 0 2 (Direction 0 0) Retracted Vulnerable
+
+getHealth :: Player -> Int
+getHealth = hp
 
 -- player movement interface
 
@@ -136,11 +139,6 @@ damageEnemy e = case eDamageState e of
   Vulnerable -> e {health = health e - 1, eDamageState = Invulnerable enemyDamageTime}
   Invulnerable _ -> e
 
-playerAlive :: Player -> Bool
-playerAlive p
-  | hp p <= 0 = False
-  | otherwise = True
-
 enemyAlive :: Enemy -> Bool
 enemyAlive e
   | health e <= 0 = False
@@ -150,15 +148,19 @@ enemyAlive e
 
 data EnemyType = Shark | Jellyfish
 
-data Enemy = Enemy {xPos :: Float, yPos :: Float, health :: Int, enemyType :: EnemyType, eDamageState :: DamageState}
+data Enemy = Enemy {xPos :: Float, yPos :: Float, health :: Int, enemyType :: EnemyType, eDamageState :: DamageState, aggroed :: Bool}
 
 updateEnemyPos :: Player -> Enemy -> Enemy
 updateEnemyPos p e = case enemyType e of
-  Shark -> e {xPos = xPos e + 3 * xdir, yPos = yPos e + 3 * ydir}
   Jellyfish -> e
+  Shark ->
+    if aggroed e || yDist < 400
+      then e {xPos = xPos e + 3 * xdir, yPos = yPos e + 3 * ydir, aggroed = True}
+      else e
   where
+    yDist = y p - yPos e
     xdir = signum $ x p - xPos e
-    ydir = signum $ y p - yPos e
+    ydir = signum yDist
 
 enemyMisc :: Enemy -> Enemy
 enemyMisc e = case eDamageState e of
@@ -199,8 +201,8 @@ getScore e = case enemyType e of
 
 startingEnemies :: [Enemy]
 startingEnemies =
-  [ Enemy 150 400 2 Shark Vulnerable,
-    Enemy (-200) 200 1 Jellyfish Vulnerable
+  [ Enemy 150 (-400) 2 Shark Vulnerable False,
+    Enemy (-200) 200 1 Jellyfish Vulnerable False
   ]
 
 -- player direction interfaces

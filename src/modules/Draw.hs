@@ -6,7 +6,8 @@ data SpriteSheet = SpriteSheet
   { playerSprite :: Picture,
     sharkSprite :: Picture,
     jellyFishSprite :: Picture,
-    background :: Picture
+    background :: Picture,
+    oxygen :: Picture
   }
 
 class Draw a where

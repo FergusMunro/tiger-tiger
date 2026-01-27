@@ -5,6 +5,7 @@ import Draw
 import Entities
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Interact
+import Text.Printf
 
 data Button = Button {x :: Float, y :: Float, width :: Float, height :: Float, message :: String, effect :: State -> State}
 
@@ -42,23 +43,37 @@ backgroundColor = black
 
 drawGame :: SpriteSheet -> State -> Picture
 -- draw game
-drawGame ss (Game g) = Pictures $ drawBG : draw ss (player g) : map (draw ss) (enemies g)
+drawGame ss (Game g) = Pictures $ drawBG : drawHUD : draw ss (player g) : map (draw ss) (enemies g)
   where
     drawBG :: Picture
     drawBG =
       Pictures
         [ Scale 2 2 $ background ss,
-          Translate ((screenWidth + w) / 2) 0 $ Color hudColor $ rectangleSolid w screenHeight,
-          Translate (-((screenWidth + w) / 2)) 0 $ Color hudColor $ rectangleSolid w screenHeight
+          Translate hudMiddle 0 $ Color hudColor $ rectangleSolid w screenHeight,
+          Translate (-hudMiddle) 0 $ Color hudColor $ rectangleSolid w screenHeight
         ]
-      where
-        w = (maxWidth - screenWidth) / 2
 
     drawHUD :: Picture
     drawHUD =
-      Pictures
-        [ Blank
+      Pictures $
+        [ Translate (-hudMiddle - 75) 75 $ Scale 0.5 0.5 $ Color white $ Text "Oxygen:",
+          Translate (hudMiddle - 75) 75 $ Scale 0.5 0.5 $ Color white $ Text "Score:",
+          Translate (hudMiddle - 75) 0 $ Scale 0.5 0.5 $ Color white $ Text $ printf "%05d" (score g)
         ]
+          ++ [ Translate (-hudMiddle) 0 $
+                 Translate (spacing * xOffset) (spacing * yOffset) $
+                   Scale 4 4 $
+                     oxygen ss
+               | x <- [0 .. hp - 1],
+                 let xOffset = fromIntegral $ x `mod` 2,
+                 let yOffset = fromIntegral $ -(x `div` 2)
+             ]
+
+    hp = getHealth $ player g
+    w = (maxWidth - screenWidth) / 2
+    hudMiddle = (screenWidth + w) / 2
+
+    spacing = 16 * 4 + 10
 
 -- draw menu
 drawGame ss (Menu m) = drawnButtons
@@ -93,13 +108,13 @@ inputs _ s = s
 
 step :: Float -> State -> State
 step _ (Game g)
-  | not $ playerAlive finalPlayer = startingWorld
+  | getHealth finalPlayer <= 0 = startingWorld
   | otherwise =
       Game $
         g
           { player = finalPlayer,
             enemies = finalEnemies,
-            score = finalScore
+            score = finalScore + score g
           }
   where
     -- update player
