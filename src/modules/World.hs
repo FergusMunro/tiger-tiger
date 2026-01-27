@@ -19,7 +19,7 @@ instance Draw Button where
 startGameButton :: Button
 startGameButton = Button 0 0 750 110 "Start Game" initialiseGame
   where
-    initialiseGame _ = Game $ GameState startingPlayer startingEnemies 0 0
+    initialiseGame _ = Game $ GameState startingPlayer startingEnemies startingBlocks 0 0
 
 quitGameButton :: Button
 quitGameButton = Button 0 (-200) 750 110 "Exit" (\_ -> error "quit game successfully") -- this is really naughty but realistically shouldn't be a problem
@@ -32,6 +32,7 @@ data MenuState = MenuState {selected :: Int, buttons :: [Button]}
 data GameState = GameState
   { player :: Player,
     enemies :: [Enemy],
+    blocks :: [Block],
     score :: Int,
     treasures :: Int
   }
@@ -43,12 +44,12 @@ backgroundColor = black
 
 drawGame :: SpriteSheet -> State -> Picture
 -- draw game
-drawGame ss (Game g) = Pictures $ drawBG : drawHUD : draw ss (player g) : map (draw ss) (enemies g)
+drawGame ss (Game g) = Pictures $ drawBG : drawHUD : draw ss (player g) : map (draw ss) (enemies g) ++ map (draw ss) (blocks g)
   where
     drawBG :: Picture
     drawBG =
       Pictures
-        [ Scale 2 2 $ background ss,
+        [ Scale 2 2 $ backgroundSprite ss,
           Translate hudMiddle 0 $ Color hudColor $ rectangleSolid w screenHeight,
           Translate (-hudMiddle) 0 $ Color hudColor $ rectangleSolid w screenHeight
         ]
@@ -63,7 +64,7 @@ drawGame ss (Game g) = Pictures $ drawBG : drawHUD : draw ss (player g) : map (d
           ++ [ Translate (-hudMiddle) 0 $
                  Translate (spacing * xOffset) (spacing * yOffset) $
                    Scale 4 4 $
-                     oxygen ss
+                     oxygenSprite ss
                | x <- [0 .. hp - 1],
                  let xOffset = fromIntegral $ x `mod` 2,
                  let yOffset = fromIntegral $ -(x `div` 2)

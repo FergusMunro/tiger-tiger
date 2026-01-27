@@ -17,6 +17,7 @@ main = do
   shark <- loadBMP "./resources/shark.bmp"
   bg <- loadBMP "./resources/background.bmp"
   oxygen <- loadBMP "./resources/oxygen.bmp"
+  block <- loadBMP "./resources/block.bmp"
 
-  let ss = SpriteSheet player shark jellyFish bg oxygen
+  let ss = SpriteSheet player shark jellyFish bg oxygen block
   play window backgroundColor steps startingWorld (drawGame ss) inputs step

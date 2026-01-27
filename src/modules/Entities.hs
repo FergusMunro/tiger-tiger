@@ -1,4 +1,28 @@
-module Entities (Player, Enemy, startingPlayer, startingEnemies, playerMovement, playerMisc, extend, directDown, directLeft, directUp, directRight, updateEnemyPos, damagePlayer, enemyAttacked, damageEnemy, enemyMisc, enemyAlive, getScore, getHealth) where
+module Entities
+  ( Player,
+    Enemy,
+    Block,
+    Item,
+    startingPlayer,
+    startingEnemies,
+    startingBlocks,
+    playerMovement,
+    playerMisc,
+    extend,
+    directDown,
+    directLeft,
+    directUp,
+    directRight,
+    updateEnemyPos,
+    damagePlayer,
+    enemyAttacked,
+    damageEnemy,
+    enemyMisc,
+    enemyAlive,
+    getScore,
+    getHealth,
+  )
+where
 
 import Collision
 import Draw
@@ -198,6 +222,28 @@ getScore :: Enemy -> Int
 getScore e = case enemyType e of
   Shark -> 800
   Jellyfish -> 500
+
+-- block code
+
+data Block = Block
+  { blockX :: Float,
+    blockY :: Float
+  }
+
+instance Draw Block where
+  draw ss b = Translate (blockX b) (blockY b) $ Scale 3.125 3.125 $ blockSprite ss
+
+startingBlocks = [Block 0 200, Block 50 200]
+
+-- item code
+
+data ItemType = OxygenTank | Treasure | PowerUp
+
+data Item = Item
+  { itemX :: Float,
+    itemY :: Float,
+    itemType :: ItemType
+  }
 
 startingEnemies :: [Enemy]
 startingEnemies =
