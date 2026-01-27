@@ -1,8 +1,9 @@
-module Entities (Player, Enemy, startingPlayer, startingEnemies, playerMovement, playerMisc, extend, directDown, directLeft, directUp, directRight, updateEnemyPos, damagePlayer, enemyAttacked, damageEnemy) where
+module Entities (Player, Enemy, startingPlayer, startingEnemies, playerMovement, playerMisc, extend, directDown, directLeft, directUp, directRight, updateEnemyPos, damagePlayer, enemyAttacked, damageEnemy, enemyMisc, enemyAlive, playerAlive) where
 
 import Collision
 import Draw
 import Graphics.Gloss
+import qualified Graphics.Gloss.Data.Point.Arithmetic as PointArithmetic
 
 -- player code
 
@@ -31,7 +32,7 @@ instance Shape Player where
       h = playerHeight / 2
 
 startingPlayer :: Player
-startingPlayer = Player 0 0 0 (Direction 0 0) Retracted Vulnerable
+startingPlayer = Player 0 0 2 (Direction 0 0) Retracted Vulnerable
 
 -- player movement interface
 
@@ -70,13 +71,14 @@ instance Draw Anchor where
           rectangleWire length anchorHeight
     where
       length = getAnchorLength (Extended x d)
+      -- for some unknown reason they rotate clockwise in their function so we need to do this
       angle = 360 - directionToAngle d
 
 data AnchorPos = AnchorPos Anchor Coordinate
 
 instance Shape AnchorPos where
   getCoordinates (AnchorPos Retracted _) = []
-  getCoordinates (AnchorPos (Extended l d) (x, y)) = map (f . rotate2d angle) coords
+  getCoordinates (AnchorPos (Extended l d) (x, y)) = map ((PointArithmetic.+ (x, y)) . rotate2d angle) coords
     where
       angle = directionToAngle d
       coords =
@@ -89,7 +91,6 @@ instance Shape AnchorPos where
       h = anchorHeight / 2
       x' = w + playerWidth / 2
       y' = 0
-      f (a, b) = (a + x, b + y)
 
 extend :: Player -> Player
 extend p = case anchor p of
@@ -119,6 +120,16 @@ damageEnemy e = case eDamageState e of
   Vulnerable -> e {health = health e - 1, eDamageState = Invulnerable enemyDamageTime}
   Invulnerable _ -> e
 
+playerAlive :: Player -> Bool
+playerAlive p
+  | hp p <= 0 = False
+  | otherwise = True
+
+enemyAlive :: Enemy -> Bool
+enemyAlive e
+  | health e <= 0 = False
+  | otherwise = True
+
 -- enemy Code
 
 data EnemyType = Shark | Jellyfish
@@ -132,6 +143,12 @@ updateEnemyPos p e = case enemyType e of
   where
     xdir = signum $ x p - xPos e
     ydir = signum $ y p - yPos e
+
+enemyMisc :: Enemy -> Enemy
+enemyMisc e = case eDamageState e of
+  Vulnerable -> e
+  Invulnerable 0 -> e {eDamageState = Vulnerable}
+  Invulnerable x -> e {eDamageState = Invulnerable (x - 1)}
 
 instance Draw Enemy where
   draw ss e = case enemyType e of

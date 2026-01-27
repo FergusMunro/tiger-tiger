@@ -74,12 +74,14 @@ inputs (EventKey (SpecialKey KeyEnter) Down _ _) (Menu m) = effect pressed (Menu
 inputs _ s = s
 
 step :: Float -> State -> State
-step _ (Game g) =
-  Game $
-    g
-      { player = finalPlayer,
-        enemies = finalEnemies
-      }
+step _ (Game g)
+  | not $ playerAlive finalPlayer = startingWorld
+  | otherwise =
+      Game $
+        g
+          { player = finalPlayer,
+            enemies = finalEnemies
+          }
   where
     -- update player
     movedPlayer = (playerMisc . playerMovement) (player g)
@@ -90,8 +92,10 @@ step _ (Game g) =
         else movedPlayer
     -- handle anchor collisions
     movedEnemies = map (updateEnemyPos (player g)) (enemies g)
-    finalEnemies = map f movedEnemies
-    f e
+    finalEnemies = filter enemyAlive . map (enemyMisc . enemyDamage) $ movedEnemies
+
+    enemyDamage :: Enemy -> Enemy
+    enemyDamage e
       | enemyAttacked finalPlayer e = damageEnemy e
       | otherwise = e
 step _ s = s
