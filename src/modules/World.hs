@@ -1,4 +1,4 @@
-module World (background, startingWorld, drawGame, inputs, step) where
+module World (backgroundColor, startingWorld, drawGame, inputs, step) where
 
 import Collision
 import Draw
@@ -16,9 +16,9 @@ instance Draw Button where
       ]
 
 startGameButton :: Button
-startGameButton = Button 0 0 750 110 "Start Game" foo
+startGameButton = Button 0 0 750 110 "Start Game" initialiseGame
   where
-    foo (Menu m) = Game $ GameState startingPlayer startingEnemies False
+    initialiseGame _ = Game $ GameState startingPlayer startingEnemies 0 0
 
 quitGameButton :: Button
 quitGameButton = Button 0 (-200) 750 110 "Exit" (\_ -> error "quit game successfully") -- this is really naughty but realistically shouldn't be a problem
@@ -31,17 +31,35 @@ data MenuState = MenuState {selected :: Int, buttons :: [Button]}
 data GameState = GameState
   { player :: Player,
     enemies :: [Enemy],
-    paused :: Bool
+    score :: Int,
+    treasures :: Int
   }
 
 data State = Menu MenuState | Game GameState
 
-background :: Color
-background = black
+backgroundColor :: Color
+backgroundColor = black
 
 drawGame :: SpriteSheet -> State -> Picture
 -- draw game
-drawGame ss (Game g) = Pictures $ draw ss (player g) : map (draw ss) (enemies g)
+drawGame ss (Game g) = Pictures $ drawBG : draw ss (player g) : map (draw ss) (enemies g)
+  where
+    drawBG :: Picture
+    drawBG =
+      Pictures
+        [ Scale 2 2 $ background ss,
+          Translate ((screenWidth + w) / 2) 0 $ Color hudColor $ rectangleSolid w screenHeight,
+          Translate (-((screenWidth + w) / 2)) 0 $ Color hudColor $ rectangleSolid w screenHeight
+        ]
+      where
+        w = (maxWidth - screenWidth) / 2
+
+    drawHUD :: Picture
+    drawHUD =
+      Pictures
+        [ Blank
+        ]
+
 -- draw menu
 drawGame ss (Menu m) = drawnButtons
   where
@@ -80,22 +98,31 @@ step _ (Game g)
       Game $
         g
           { player = finalPlayer,
-            enemies = finalEnemies
+            enemies = finalEnemies,
+            score = finalScore
           }
   where
     -- update player
-    movedPlayer = (playerMisc . playerMovement) (player g)
-    playerDamaged = any (areIntersecting movedPlayer) (enemies g)
-    finalPlayer =
-      if playerDamaged
-        then damagePlayer movedPlayer
-        else movedPlayer
+    finalPlayer = (playerDamage . playerMisc . playerMovement) (player g)
     -- handle anchor collisions
     movedEnemies = map (updateEnemyPos (player g)) (enemies g)
-    finalEnemies = filter enemyAlive . map (enemyMisc . enemyDamage) $ movedEnemies
+    (finalScore, finalEnemies) = enemyFilter . map (enemyMisc . enemyDamage) $ movedEnemies
+
+    playerDamage :: Player -> Player
+    playerDamage p
+      | any (areIntersecting p) (enemies g) = damagePlayer p
+      | otherwise = p
 
     enemyDamage :: Enemy -> Enemy
     enemyDamage e
       | enemyAttacked finalPlayer e = damageEnemy e
       | otherwise = e
+
+    enemyFilter :: [Enemy] -> (Int, [Enemy])
+    enemyFilter = enemyFilter' (0, [])
+      where
+        enemyFilter' acc [] = acc
+        enemyFilter' (x, enemies) (e : es)
+          | enemyAlive e = enemyFilter' (x, e : enemies) es
+          | otherwise = enemyFilter' (x + getScore e, enemies) es
 step _ s = s

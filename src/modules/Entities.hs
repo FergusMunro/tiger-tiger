@@ -1,4 +1,4 @@
-module Entities (Player, Enemy, startingPlayer, startingEnemies, playerMovement, playerMisc, extend, directDown, directLeft, directUp, directRight, updateEnemyPos, damagePlayer, enemyAttacked, damageEnemy, enemyMisc, enemyAlive, playerAlive) where
+module Entities (Player, Enemy, startingPlayer, startingEnemies, playerMovement, playerMisc, extend, directDown, directLeft, directUp, directRight, updateEnemyPos, damagePlayer, enemyAttacked, damageEnemy, enemyMisc, enemyAlive, playerAlive, getScore) where
 
 import Collision
 import Draw
@@ -38,11 +38,26 @@ startingPlayer = Player 0 0 2 (Direction 0 0) Retracted Vulnerable
 
 playerMovement :: Player -> Player
 playerMovement p =
-  p {x = x p + horizontal * 7, y = y p + vertical * 7}
+  p {x = boundX x', y = boundY y'}
   where
+    x' = x p + horizontal * 7
+    y' = y p + vertical * 7
     Direction h v = direction p
     horizontal = fromIntegral h
     vertical = fromIntegral v
+
+    -- check screen bounds
+    boundX :: Float -> Float
+    boundX x
+      | x - playerWidth / 2 < -(screenWidth / 2) = (playerWidth - screenWidth) / 2
+      | x + playerWidth / 2 > screenWidth / 2 = (screenWidth - playerWidth) / 2
+      | otherwise = x
+
+    boundY :: Float -> Float
+    boundY y
+      | y - playerHeight / 2 < -(screenHeight / 2) = (playerHeight - screenHeight) / 2
+      | y + playerHeight / 2 > (screenHeight / 2) = (screenHeight - playerHeight) / 2
+      | otherwise = y
 
 playerMisc :: Player -> Player
 playerMisc p = p {anchor = a, pDamageState = updateDamageState (pDamageState p)}
@@ -74,6 +89,7 @@ instance Draw Anchor where
       -- for some unknown reason they rotate clockwise in their function so we need to do this
       angle = 360 - directionToAngle d
 
+-- to draw the anchor we need to inject the coordinates, so that is what this type is for
 data AnchorPos = AnchorPos Anchor Coordinate
 
 instance Shape AnchorPos where
@@ -175,6 +191,11 @@ instance Shape Enemy where
       h = case enemyType e of
         Jellyfish -> jellyfishHeight / 2
         Shark -> sharkHeight / 2
+
+getScore :: Enemy -> Int
+getScore e = case enemyType e of
+  Shark -> 800
+  Jellyfish -> 500
 
 startingEnemies :: [Enemy]
 startingEnemies =
