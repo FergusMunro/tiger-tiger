@@ -59,7 +59,7 @@ executable tigertiger
     main-is:          Main.hs
 
     -- Modules included in this executable, other than Main.
-    other-modules: World, Entities, Draw, Collision, MapReader
+    other-modules: World, Draw, Shape, MapReader, Block, Enemy, Item, Player, Damage
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -70,6 +70,7 @@ executable tigertiger
     -- Directories containing source files.
     hs-source-dirs:   src
                       src/modules
+                      src/modules/entities
 
     -- Base language which the package is written in.
     default-language: Haskell2010

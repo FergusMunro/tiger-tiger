@@ -1,11 +1,15 @@
 module World (backgroundColor, startingWorld, drawGame, inputs, step) where
 
-import Collision
+import Block
+import Damage
 import Draw
-import Entities
+import Enemy
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Interact
+import Item
 import MapReader
+import Player
+import Shape
 import Text.Printf
 
 data Button = Button {x :: Float, y :: Float, width :: Float, height :: Float, message :: String, effect :: State -> State}
@@ -59,19 +63,19 @@ step maps _ (Game g)
     -- update player
     finalPlayer = (playerDamage . playerMisc . playerMovement) (player g)
     -- handle anchor collisions
-    movedEnemies = map (updateEnemyPos (player g) . translateEnemy (0, descendingRate)) (enemies g)
+    movedEnemies = map (enemyMovement (getCentre $ player g) . translateEnemy (0, descendingRate)) (enemies g)
     movedBlocks = map (translateBlock (0, descendingRate)) (blocks g)
     movedItems = map (translateItem (0, descendingRate)) (items g)
     (finalScore, finalEnemies) = enemyFilter . map (enemyMisc . enemyDamage) $ movedEnemies
 
     playerDamage :: Player -> Player
     playerDamage p
-      | any (areIntersecting p) (enemies g) = damagePlayer p
+      | any (areIntersecting p) (enemies g) = damage p
       | otherwise = p
 
     enemyDamage :: Enemy -> Enemy
     enemyDamage e
-      | enemyAttacked finalPlayer e = damageEnemy e
+      | isAttacking finalPlayer e = damage e
       | otherwise = e
 
     enemyFilter :: [Enemy] -> (Int, [Enemy])
@@ -79,7 +83,7 @@ step maps _ (Game g)
       where
         enemyFilter' acc [] = acc
         enemyFilter' (x, enemies) (e : es)
-          | enemyAlive e = enemyFilter' (x, e : enemies) es
+          | isAlive e = enemyFilter' (x, e : enemies) es
           | otherwise = enemyFilter' (x + getScore e, enemies) es
 step maps _ s = Game $ addMap (GameState startingPlayer [] [] [] 0 0 0) 300 (head maps)
 
@@ -101,7 +105,7 @@ drawGame ss (Game g) = Pictures $ drawBG : drawHUD : draw ss (player g) : map (d
     drawBG =
       Pictures
         [ Translate 0 (boundBackGround $ depth g / 3) $ Scale 2 2 $ backgroundSprite ss,
-          Translate 0 (boundBackGround $ -backgroundSpriteHeight + depth g / 3) $ Scale 2 2 $ backgroundSprite ss,
+          Translate 0 (-backgroundSpriteHeight + depth g / 3) $ Scale 2 2 $ backgroundSprite ss,
           Translate hudMiddle 0 $ Color hudColor $ rectangleSolid w screenHeight,
           Translate (-hudMiddle) 0 $ Color hudColor $ rectangleSolid w screenHeight
         ]

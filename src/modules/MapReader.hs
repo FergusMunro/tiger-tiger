@@ -1,8 +1,11 @@
 module MapReader where
 
+import Block
 import Data.List.Split (splitOn)
 import Draw (screenWidth)
-import Entities
+import Enemy
+import Item
+import Player
 
 data Map = Map
   { mapEnemies :: [Enemy],
