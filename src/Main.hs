@@ -2,6 +2,7 @@ module Main where
 
 import Draw
 import Graphics.Gloss
+import MapReader
 import World
 
 steps :: Int -- steps per second
@@ -17,7 +18,12 @@ main = do
   shark <- loadBMP "./resources/shark.bmp"
   bg <- loadBMP "./resources/background.bmp"
   oxygen <- loadBMP "./resources/oxygen.bmp"
+  treasure <- loadBMP "./resources/treasure.bmp"
+  powerup <- loadBMP "./resources/powerup.bmp"
   block <- loadBMP "./resources/block.bmp"
 
-  let ss = SpriteSheet player shark jellyFish bg oxygen block
-  play window backgroundColor steps startingWorld (drawGame ss) inputs step
+  map1 <- readFile "./resources/maps/1.csv"
+  let mapList = [readMap map1]
+
+  let ss = SpriteSheet player shark jellyFish bg oxygen treasure powerup block
+  play window backgroundColor steps startingWorld (drawGame ss) inputs (step mapList)

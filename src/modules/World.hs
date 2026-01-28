@@ -5,6 +5,7 @@ import Draw
 import Entities
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Interact
+import MapReader
 import Text.Printf
 
 data Button = Button {x :: Float, y :: Float, width :: Float, height :: Float, message :: String, effect :: State -> State}
@@ -19,7 +20,7 @@ instance Draw Button where
 startGameButton :: Button
 startGameButton = Button 0 0 750 110 "Start Game" initialiseGame
   where
-    initialiseGame _ = Game $ GameState startingPlayer startingEnemies startingBlocks 0 0
+    initialiseGame _ = Game $ GameState startingPlayer startingEnemies startingBlocks [] 0 0
 
 quitGameButton :: Button
 quitGameButton = Button 0 (-200) 750 110 "Exit" (\_ -> error "quit game successfully") -- this is really naughty but realistically shouldn't be a problem
@@ -33,18 +34,66 @@ data GameState = GameState
   { player :: Player,
     enemies :: [Enemy],
     blocks :: [Block],
+    items :: [Item],
     score :: Int,
     treasures :: Int
   }
 
 data State = Menu MenuState | Game GameState
 
+step :: [Map] -> Float -> State -> State
+step maps _ (Game g)
+  | getHealth finalPlayer <= 0 = startingWorld
+  | otherwise =
+      Game $
+        g
+          { player = finalPlayer,
+            enemies = finalEnemies,
+            score = finalScore + score g,
+            blocks = movedBlocks,
+            items = movedItems
+          }
+  where
+    -- update player
+    finalPlayer = (playerDamage . playerMisc . playerMovement) (player g)
+    -- handle anchor collisions
+    movedEnemies = map (updateEnemyPos (player g) . translateEnemy (0, descendingRate)) (enemies g)
+    movedBlocks = map (translateBlock (0, descendingRate)) (blocks g)
+    movedItems = map (translateItem (0, descendingRate)) (items g)
+    (finalScore, finalEnemies) = enemyFilter . map (enemyMisc . enemyDamage) $ movedEnemies
+
+    playerDamage :: Player -> Player
+    playerDamage p
+      | any (areIntersecting p) (enemies g) = damagePlayer p
+      | otherwise = p
+
+    enemyDamage :: Enemy -> Enemy
+    enemyDamage e
+      | enemyAttacked finalPlayer e = damageEnemy e
+      | otherwise = e
+
+    enemyFilter :: [Enemy] -> (Int, [Enemy])
+    enemyFilter = enemyFilter' (0, [])
+      where
+        enemyFilter' acc [] = acc
+        enemyFilter' (x, enemies) (e : es)
+          | enemyAlive e = enemyFilter' (x, e : enemies) es
+          | otherwise = enemyFilter' (x + getScore e, enemies) es
+step maps _ s = Game $ addMap (GameState startingPlayer [] [] [] 0 0) 300 (head maps)
+
+addMap :: GameState -> Float -> Map -> GameState
+addMap g offset m = g {enemies = enemies g ++ movedEnemies, blocks = blocks g ++ movedBlocks, items = items g ++ movedItems}
+  where
+    movedEnemies = map (translateEnemy (0, -offset)) (mapEnemies m)
+    movedBlocks = map (translateBlock (0, -offset)) (mapBlocks m)
+    movedItems = map (translateItem (0, -offset)) (mapItems m)
+
 backgroundColor :: Color
 backgroundColor = black
 
 drawGame :: SpriteSheet -> State -> Picture
 -- draw game
-drawGame ss (Game g) = Pictures $ drawBG : drawHUD : draw ss (player g) : map (draw ss) (enemies g) ++ map (draw ss) (blocks g)
+drawGame ss (Game g) = Pictures $ drawBG : drawHUD : draw ss (player g) : map (draw ss) (enemies g) ++ map (draw ss) (blocks g) ++ map (draw ss) (items g)
   where
     drawBG :: Picture
     drawBG =
@@ -107,38 +156,7 @@ inputs (EventKey (SpecialKey KeyEnter) Down _ _) (Menu m) = effect pressed (Menu
     pressed = buttons m !! selected m
 inputs _ s = s
 
-step :: Float -> State -> State
-step _ (Game g)
-  | getHealth finalPlayer <= 0 = startingWorld
-  | otherwise =
-      Game $
-        g
-          { player = finalPlayer,
-            enemies = finalEnemies,
-            score = finalScore + score g
-          }
-  where
-    -- update player
-    finalPlayer = (playerDamage . playerMisc . playerMovement) (player g)
-    -- handle anchor collisions
-    movedEnemies = map (updateEnemyPos (player g)) (enemies g)
-    (finalScore, finalEnemies) = enemyFilter . map (enemyMisc . enemyDamage) $ movedEnemies
-
-    playerDamage :: Player -> Player
-    playerDamage p
-      | any (areIntersecting p) (enemies g) = damagePlayer p
-      | otherwise = p
-
-    enemyDamage :: Enemy -> Enemy
-    enemyDamage e
-      | enemyAttacked finalPlayer e = damageEnemy e
-      | otherwise = e
-
-    enemyFilter :: [Enemy] -> (Int, [Enemy])
-    enemyFilter = enemyFilter' (0, [])
-      where
-        enemyFilter' acc [] = acc
-        enemyFilter' (x, enemies) (e : es)
-          | enemyAlive e = enemyFilter' (x, e : enemies) es
-          | otherwise = enemyFilter' (x + getScore e, enemies) es
-step _ s = s
+-- NOTE: important constants
+--
+descendingRate :: Float
+descendingRate = 1

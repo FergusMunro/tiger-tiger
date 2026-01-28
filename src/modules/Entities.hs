@@ -21,6 +21,14 @@ module Entities
     enemyAlive,
     getScore,
     getHealth,
+    EnemyType (Shark, Jellyfish),
+    ItemType (OxygenTank, Treasure, PowerUp),
+    createEnemy,
+    createBlock,
+    createItem,
+    translateEnemy,
+    translateBlock,
+    translateItem,
   )
 where
 
@@ -233,6 +241,19 @@ data Block = Block
 instance Draw Block where
   draw ss b = Translate (blockX b) (blockY b) $ Scale 3.125 3.125 $ blockSprite ss
 
+instance Shape Block where
+  getCoordinates b =
+    [ (x' - w, y' + h),
+      (x' + w, y' + h),
+      (x' + w, y' - h),
+      (x' - w, y' - h)
+    ]
+    where
+      x' = blockX b
+      y' = blockY b
+      w = blockWidth / 2
+      h = blockHeight / 2
+
 startingBlocks = [Block 0 200, Block 50 200]
 
 -- item code
@@ -244,6 +265,25 @@ data Item = Item
     itemY :: Float,
     itemType :: ItemType
   }
+
+instance Draw Item where
+  draw ss i = case itemType i of
+    OxygenTank -> Translate (itemX i) (itemY i) $ Scale 3 3 $ oxygenSprite ss
+    Treasure -> Translate (itemX i) (itemY i) $ Scale 3 3 $ treasureSprite ss
+    PowerUp -> Translate (itemX i) (itemY i) $ Scale 3 3 $ powerUpSprite ss
+
+instance Shape Item where
+  getCoordinates i =
+    [ (x' - w, y' + h),
+      (x' + w, y' + h),
+      (x' + w, y' - h),
+      (x' - w, y' - h)
+    ]
+    where
+      x' = itemX i
+      y' = itemY i
+      w = itemWidth / 2
+      h = itemHeight / 2
 
 startingEnemies :: [Enemy]
 startingEnemies =
@@ -271,6 +311,33 @@ directRight :: Player -> Player
 directRight p = p {direction = Direction (h + 1) v}
   where
     Direction h v = direction p
+
+createEnemy :: EnemyType -> Point -> Enemy
+createEnemy t (x, y) = Enemy x y h t Vulnerable False
+  where
+    h = case t of
+      Shark -> 2
+      Jellyfish -> 1
+
+createBlock :: Point -> Block
+createBlock (x, y) = Block x y
+
+createItem :: ItemType -> Point -> Item
+createItem t (x, y) = Item x y t
+
+translatePlayer :: Point -> Player -> Player
+translatePlayer (x', y') p = p {x = x p + x', y = y p + y'}
+
+translateEnemy :: Point -> Enemy -> Enemy
+translateEnemy (x, y) e = e {xPos = xPos e + x, yPos = yPos e + y}
+
+translateBlock :: Point -> Block -> Block
+translateBlock (x, y) b = b {blockX = blockX b + x, blockY = blockY b + y}
+
+translateItem :: Point -> Item -> Item
+translateItem (x, y) i = i {itemX = itemX i + x, itemY = itemY i + y}
+
+-- data Enemy = Enemy {xPos :: Float, yPos :: Float, health :: Int, enemyType :: EnemyType, eDamageState :: DamageState, aggroed :: Bool}
 
 -- NOTE: IMPORTANT CONSTANTS
 playerWidth :: Float
@@ -302,3 +369,15 @@ anchorExtendedTime = 30
 
 anchorHeight :: Float
 anchorHeight = 20
+
+blockWidth :: Float
+blockWidth = 50
+
+blockHeight :: Float
+blockHeight = 50
+
+itemWidth :: Float
+itemWidth = 48
+
+itemHeight :: Float
+itemHeight = 48

@@ -8,6 +8,8 @@ data SpriteSheet = SpriteSheet
     jellyFishSprite :: Picture,
     backgroundSprite :: Picture,
     oxygenSprite :: Picture,
+    treasureSprite :: Picture,
+    powerUpSprite :: Picture,
     blockSprite :: Picture
   }
 
