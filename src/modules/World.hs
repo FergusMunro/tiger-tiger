@@ -20,7 +20,7 @@ instance Draw Button where
 startGameButton :: Button
 startGameButton = Button 0 0 750 110 "Start Game" initialiseGame
   where
-    initialiseGame _ = Game $ GameState startingPlayer startingEnemies startingBlocks [] 0 0
+    initialiseGame _ = Game $ GameState startingPlayer startingEnemies startingBlocks [] 0 0 0
 
 quitGameButton :: Button
 quitGameButton = Button 0 (-200) 750 110 "Exit" (\_ -> error "quit game successfully") -- this is really naughty but realistically shouldn't be a problem
@@ -36,7 +36,8 @@ data GameState = GameState
     blocks :: [Block],
     items :: [Item],
     score :: Int,
-    treasures :: Int
+    treasures :: Int,
+    depth :: Float
   }
 
 data State = Menu MenuState | Game GameState
@@ -51,7 +52,8 @@ step maps _ (Game g)
             enemies = finalEnemies,
             score = finalScore + score g,
             blocks = movedBlocks,
-            items = movedItems
+            items = movedItems,
+            depth = depth g + descendingRate
           }
   where
     -- update player
@@ -79,7 +81,7 @@ step maps _ (Game g)
         enemyFilter' (x, enemies) (e : es)
           | enemyAlive e = enemyFilter' (x, e : enemies) es
           | otherwise = enemyFilter' (x + getScore e, enemies) es
-step maps _ s = Game $ addMap (GameState startingPlayer [] [] [] 0 0) 300 (head maps)
+step maps _ s = Game $ addMap (GameState startingPlayer [] [] [] 0 0 0) 300 (head maps)
 
 addMap :: GameState -> Float -> Map -> GameState
 addMap g offset m = g {enemies = enemies g ++ movedEnemies, blocks = blocks g ++ movedBlocks, items = items g ++ movedItems}
@@ -98,10 +100,17 @@ drawGame ss (Game g) = Pictures $ drawBG : drawHUD : draw ss (player g) : map (d
     drawBG :: Picture
     drawBG =
       Pictures
-        [ Scale 2 2 $ backgroundSprite ss,
+        [ Translate 0 (boundBackGround $ depth g / 3) $ Scale 2 2 $ backgroundSprite ss,
+          Translate 0 (boundBackGround $ -backgroundSpriteHeight + depth g / 3) $ Scale 2 2 $ backgroundSprite ss,
           Translate hudMiddle 0 $ Color hudColor $ rectangleSolid w screenHeight,
           Translate (-hudMiddle) 0 $ Color hudColor $ rectangleSolid w screenHeight
         ]
+
+    boundBackGround :: Float -> Float
+    boundBackGround x = fromIntegral $ (x' + (y `div` 2)) `mod` y - y `div` 2
+      where
+        x' = round x
+        y = round $ screenHeight + backgroundSpriteHeight
 
     drawHUD :: Picture
     drawHUD =

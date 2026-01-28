@@ -28,3 +28,9 @@ screenWidth = 1000
 
 screenHeight :: Float
 screenHeight = 1080
+
+backgroundSpriteWidth :: Float
+backgroundSpriteWidth = 1024
+
+backgroundSpriteHeight :: Float
+backgroundSpriteHeight = 1280
