@@ -27,9 +27,10 @@ readMap s = convert parsedText
       | c == "1" = Block $ createBlock (x', y')
       | c == "2" = Enemy $ createEnemy Shark (x', y')
       | c == "3" = Enemy $ createEnemy Jellyfish (x', y')
-      | c == "4" = Item $ createItem OxygenTank (x', y')
-      | c == "5" = Item $ createItem Treasure (x', y')
-      | c == "6" = Item $ createItem PowerUp (x', y')
+      | c == "4" = Item $ createItem Crystal (x', y')
+      | c == "5" = Item $ createItem OxygenTank (x', y')
+      | c == "6" = Item $ createItem Treasure (x', y')
+      | c == "7" = Item $ createItem PowerUp (x', y')
       | otherwise = error "invalid csv"
       where
         x' = fromIntegral x * 50 + 25 - (screenWidth / 2)

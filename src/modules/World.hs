@@ -61,17 +61,32 @@ step maps _ (Game g)
           }
   where
     -- update player
-    finalPlayer = (playerDamage . playerMisc . playerMovement) (player g)
+    finalPlayer = (blockCollision . playerDamage . playerMisc . playerMovement) (player g)
+
     -- handle anchor collisions
-    movedEnemies = map (enemyMovement (getCentre $ player g) . translateEnemy (0, descendingRate)) (enemies g)
-    movedBlocks = map (translateBlock (0, descendingRate)) (blocks g)
-    movedItems = map (translateItem (0, descendingRate)) (items g)
+    movedEnemies = map (blockCollision . enemyMovement (getCentre $ player g) . translateShape (0, descendingRate)) (enemies g)
+    movedBlocks = map (translateShape (0, descendingRate)) (blocks g)
+    movedItems = map (translateShape (0, descendingRate)) (items g)
     (finalScore, finalEnemies) = enemyFilter . map (enemyMisc . enemyDamage) $ movedEnemies
+
+    blockCollision :: (Shape a) => a -> a
+    blockCollision x = moveOutofBlocks x (intersectingBlocks x movedBlocks)
 
     playerDamage :: Player -> Player
     playerDamage p
       | any (areIntersecting p) (enemies g) = damage p
       | otherwise = p
+
+    intersectingBlocks :: (Shape a) => a -> [Block] -> [Block]
+    intersectingBlocks p = filter (areIntersecting p)
+
+    moveOutofBlocks :: (Shape a) => a -> [Block] -> a
+    moveOutofBlocks = foldr f
+      where
+        f :: (Shape a) => Block -> a -> a
+        f b p = translateShape v p
+          where
+            v = findMTV b p
 
     enemyDamage :: Enemy -> Enemy
     enemyDamage e
@@ -85,14 +100,14 @@ step maps _ (Game g)
         enemyFilter' (x, enemies) (e : es)
           | isAlive e = enemyFilter' (x, e : enemies) es
           | otherwise = enemyFilter' (x + getScore e, enemies) es
-step maps _ s = Game $ addMap (GameState startingPlayer [] [] [] 0 0 0) 300 (head maps)
+step maps _ s = Game $ addMap (GameState startingPlayer [] [] [] 0 0 0) 0 (head maps)
 
 addMap :: GameState -> Float -> Map -> GameState
 addMap g offset m = g {enemies = enemies g ++ movedEnemies, blocks = blocks g ++ movedBlocks, items = items g ++ movedItems}
   where
-    movedEnemies = map (translateEnemy (0, -offset)) (mapEnemies m)
-    movedBlocks = map (translateBlock (0, -offset)) (mapBlocks m)
-    movedItems = map (translateItem (0, -offset)) (mapItems m)
+    movedEnemies = map (translateShape (0, -offset)) (mapEnemies m)
+    movedBlocks = map (translateShape (0, -offset)) (mapBlocks m)
+    movedItems = map (translateShape (0, -offset)) (mapItems m)
 
 backgroundColor :: Color
 backgroundColor = black

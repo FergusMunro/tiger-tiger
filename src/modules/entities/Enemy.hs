@@ -6,7 +6,6 @@ module Enemy
     enemyMisc,
     getScore,
     createEnemy,
-    translateEnemy,
   )
 where
 
@@ -46,6 +45,7 @@ instance Shape Enemy where
         Jellyfish -> jellyfishHeight / 2
         Shark -> sharkHeight / 2
   getCentre e = (enemyX e, enemyY e)
+  translateShape (x, y) e = e {enemyX = enemyX e + x, enemyY = enemyY e + y}
 
 instance Damageable Enemy where
   damage e = case eDamageState e of
@@ -92,9 +92,6 @@ createEnemy t (x, y) = Enemy x y h t Vulnerable False
     h = case t of
       Shark -> 2
       Jellyfish -> 1
-
-translateEnemy :: Point -> Enemy -> Enemy
-translateEnemy (x, y) e = e {enemyX = enemyX e + x, enemyY = enemyY e + y}
 
 -- NOTE: IMPORTANT CONSTANTS
 

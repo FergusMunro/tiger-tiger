@@ -10,6 +10,7 @@ data SpriteSheet = SpriteSheet
     oxygenSprite :: Picture,
     treasureSprite :: Picture,
     powerUpSprite :: Picture,
+    crystalSprite :: Picture,
     blockSprite :: Picture
   }
 

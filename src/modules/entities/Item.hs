@@ -1,9 +1,8 @@
 module Item
   ( Item,
-    ItemType (OxygenTank, Treasure, PowerUp),
+    ItemType (OxygenTank, Treasure, PowerUp, Crystal),
     startingItems,
     createItem,
-    translateItem,
   )
 where
 
@@ -12,7 +11,7 @@ import Graphics.Gloss
 import qualified Graphics.Gloss.Data.Point.Arithmetic as PointArithmetic
 import Shape
 
-data ItemType = OxygenTank | Treasure | PowerUp
+data ItemType = OxygenTank | Treasure | PowerUp | Crystal
 
 data Item = Item
   { itemX :: Float,
@@ -25,6 +24,7 @@ instance Draw Item where
     OxygenTank -> Translate (itemX i) (itemY i) $ Scale 3 3 $ oxygenSprite ss
     Treasure -> Translate (itemX i) (itemY i) $ Scale 3 3 $ treasureSprite ss
     PowerUp -> Translate (itemX i) (itemY i) $ Scale 3 3 $ powerUpSprite ss
+    Crystal -> Translate (itemX i) (itemY i) $ Scale 3 3 $ crystalSprite ss
 
 instance Shape Item where
   getCoordinates i =
@@ -40,14 +40,12 @@ instance Shape Item where
       h = itemHeight / 2
 
   getCentre i = (itemX i, itemY i)
+  translateShape (x, y) i = i {itemX = itemX i + x, itemY = itemY i + y}
 
 createItem :: ItemType -> Point -> Item
 createItem t (x, y) = Item x y t
 
-translateItem :: Point -> Item -> Item
-translateItem (x, y) i = i {itemX = itemX i + x, itemY = itemY i + y}
-
-startingItems = []
+startingItems = [Item 0 (-200) Crystal]
 
 -- NOTE: IMPORTANT CONSTANTS
 

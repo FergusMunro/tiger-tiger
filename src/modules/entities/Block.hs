@@ -2,7 +2,6 @@ module Block
   ( Block,
     startingBlocks,
     createBlock,
-    translateBlock,
   )
 where
 
@@ -33,11 +32,9 @@ instance Shape Block where
       h = blockHeight / 2
 
   getCentre b = (blockX b, blockY b)
+  translateShape (x, y) b = b {blockX = blockX b + x, blockY = blockY b + y}
 
 startingBlocks = [Block 0 200, Block 50 200]
-
-translateBlock :: Point -> Block -> Block
-translateBlock (x, y) b = b {blockX = blockX b + x, blockY = blockY b + y}
 
 createBlock :: Point -> Block
 createBlock (x, y) = Block x y

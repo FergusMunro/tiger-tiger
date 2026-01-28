@@ -45,6 +45,7 @@ instance Shape Player where
       w = playerWidth / 2
       h = playerHeight / 2
   getCentre p = (playerX p, playerY p)
+  translateShape (x, y) p = p {playerX = playerX p + x, playerY = playerY p + y}
 
 instance Damageable Player where
   damage p = case pDamageState p of
@@ -131,6 +132,7 @@ instance Shape AnchorPos where
       x' = w + playerWidth / 2
       y' = 0
   getCentre (AnchorPos _ c) = c
+  translateShape (x, y) (AnchorPos anchor (a, b)) = AnchorPos anchor (x + a, y + b)
 
 extend :: Player -> Player
 extend p = case anchor p of
@@ -162,9 +164,6 @@ directRight :: Player -> Player
 directRight p = p {direction = Direction (h + 1) v}
   where
     Direction h v = direction p
-
-translatePlayer :: Point -> Player -> Player
-translatePlayer (x', y') p = p {playerX = playerX p + x', playerY = playerY p + y'}
 
 -- NOTE: IMPORTANT CONSTANTS
 
