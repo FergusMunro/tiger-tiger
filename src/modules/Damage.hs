@@ -1,11 +1,12 @@
-module Damage (DamageState (Vulnerable, Invulnerable), Damageable (damage, isAlive, getHealth, updateDamage), updateDamageState) where
+module Damage (DamageState (Vulnerable, Invulnerable), Damageable (damage, isAlive, getHealth, updateDamage, addHealth), updateDamageState) where
 
 data DamageState = Vulnerable | Invulnerable Int
 
 class Damageable a where
-  damage :: a -> a
+  damage :: a -> (Bool, a)
   isAlive :: a -> Bool
   getHealth :: a -> Int
+  addHealth :: a -> Int -> a
   updateDamage :: a -> a
 
 updateDamageState :: DamageState -> DamageState

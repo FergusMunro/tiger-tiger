@@ -1,7 +1,6 @@
 module Enemy
   ( Enemy,
     EnemyType (Shark, Jellyfish),
-    startingEnemies,
     enemyMovement,
     enemyMisc,
     getScore,
@@ -49,11 +48,12 @@ instance Shape Enemy where
 
 instance Damageable Enemy where
   damage e = case eDamageState e of
-    Vulnerable -> e {health = health e - 1, eDamageState = Invulnerable enemyDamageTime}
-    Invulnerable _ -> e
+    Vulnerable -> (True, e {health = health e - 1, eDamageState = Invulnerable enemyDamageTime})
+    Invulnerable _ -> (False, e)
   isAlive e = health e > 0
   getHealth = health
   updateDamage e = e {eDamageState = updateDamageState (eDamageState e)}
+  addHealth e h = e {health = health e + h}
 
 type PlayerPos = Point
 
@@ -79,12 +79,6 @@ getScore :: Enemy -> Int
 getScore e = case enemyType e of
   Shark -> 800
   Jellyfish -> 500
-
-startingEnemies :: [Enemy]
-startingEnemies =
-  [ Enemy 150 (-400) 2 Shark Vulnerable False,
-    Enemy (-200) 200 1 Jellyfish Vulnerable False
-  ]
 
 createEnemy :: EnemyType -> Point -> Enemy
 createEnemy t (x, y) = Enemy x y h t Vulnerable False

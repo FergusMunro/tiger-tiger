@@ -24,11 +24,14 @@ hudColor = makeColorI 10 35 38 255
 maxWidth :: Float
 maxWidth = 1920
 
+maxHeight :: Float
+maxHeight = 1080
+
 screenWidth :: Float
 screenWidth = 1000
 
 screenHeight :: Float
-screenHeight = 1080
+screenHeight = 800
 
 backgroundSpriteWidth :: Float
 backgroundSpriteWidth = 1024

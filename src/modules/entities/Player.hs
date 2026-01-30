@@ -9,6 +9,8 @@ module Player
     directLeft,
     directUp,
     directRight,
+    fastRetract,
+    makeInvulnerable,
   )
 where
 
@@ -49,16 +51,17 @@ instance Shape Player where
 
 instance Damageable Player where
   damage p = case pDamageState p of
-    Vulnerable -> p {hp = hp p - 1, pDamageState = Invulnerable playerDamageTime}
-    Invulnerable _ -> p
+    Vulnerable -> (True, p {hp = hp p - 1, pDamageState = Invulnerable playerDamageTime})
+    Invulnerable _ -> (False, p)
   isAlive p = hp p > 0
   getHealth = hp
   updateDamage p = p {pDamageState = updateDamageState (pDamageState p)}
+  addHealth p h = p {hp = hp p + h}
 
 startingPlayer :: Player
-startingPlayer = Player 0 0 2 (Direction 0 0) Retracted Vulnerable
+startingPlayer = Player 0 0 4 (Direction 0 0) Retracted Vulnerable
 
--- player movement interface
+-- player movement
 
 playerMovement :: Player -> Player
 playerMovement p =
@@ -93,12 +96,15 @@ playerMisc p = p {anchor = a, pDamageState = updateDamageState (pDamageState p)}
           then Retracted
           else Extended (i + 1) d
 
+makeInvulnerable :: Player -> Player
+makeInvulnerable p = p {pDamageState = Invulnerable powerUpTime}
+
 -- Anchor Code
 
 data Anchor = Retracted | Extended Int Direction
 
 getAnchorLength :: (Num a) => Anchor -> a
-getAnchorLength (Extended x _) = fromIntegral $ 35 * min (15 - abs (x - 15)) 12
+getAnchorLength (Extended x _) = fromIntegral $ 20 * min (15 - abs (x - 15)) 12
 getAnchorLength _ = 0
 
 instance Draw Anchor where
@@ -110,7 +116,7 @@ instance Draw Anchor where
           rectangleWire length anchorHeight
     where
       length = getAnchorLength (Extended playerX d)
-      -- for some unknown reason theplayerY rotate clockwise in their function so we need to do this
+      -- for some unknown reason they rotate clockwise in their function so we need to do this
       angle = 360 - directionToAngle d
 
 -- to draw the anchor we need to inject the coordinates, so that is what this type is for
@@ -143,6 +149,13 @@ isAttacking :: (Shape a) => Player -> a -> Bool
 isAttacking p e = case anchor p of
   Retracted -> False
   a -> areIntersecting (AnchorPos a (playerX p, playerY p)) e
+
+fastRetract :: Player -> Player
+fastRetract p = p {anchor = a}
+  where
+    a = case anchor p of
+      Retracted -> Retracted
+      Extended i d -> Extended (max i (anchorExtendedTime - i)) d
 
 -- player direction interfaces
 directDown :: Player -> Player
@@ -181,3 +194,6 @@ anchorExtendedTime = 30
 
 anchorHeight :: Float
 anchorHeight = 20
+
+powerUpTime :: Int
+powerUpTime = 1000

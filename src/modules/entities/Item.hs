@@ -1,7 +1,7 @@
 module Item
   ( Item,
+    itemType,
     ItemType (OxygenTank, Treasure, PowerUp, Crystal),
-    startingItems,
     createItem,
   )
 where
@@ -44,8 +44,6 @@ instance Shape Item where
 
 createItem :: ItemType -> Point -> Item
 createItem t (x, y) = Item x y t
-
-startingItems = [Item 0 (-200) Crystal]
 
 -- NOTE: IMPORTANT CONSTANTS
 

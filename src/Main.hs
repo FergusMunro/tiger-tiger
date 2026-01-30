@@ -23,8 +23,16 @@ main = do
   crystal <- loadBMP "./resources/sprites/crystal.bmp"
   block <- loadBMP "./resources/sprites/block.bmp"
 
+  start <- readFile "./resources/maps/start.csv"
   map1 <- readFile "./resources/maps/1.csv"
-  let mapList = [readMap map1]
+  map2 <- readFile "./resources/maps/2.csv"
+  map3 <- readFile "./resources/maps/3.csv"
+
+  end <- readFile "./resources/maps/end.csv"
+
+  let mapList = map readMap [start, map1, map2, map3, end]
+
+  let startingWorld' = setMaps startingWorld mapList
 
   let ss = SpriteSheet player shark jellyFish bg oxygen treasure powerup crystal block
-  play window backgroundColor steps startingWorld (drawGame ss) inputs (step mapList)
+  play window backgroundColor steps startingWorld' (drawGame ss) inputs step
