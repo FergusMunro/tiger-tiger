@@ -33,6 +33,7 @@ readMap s = convert parsedText
       | c == "7" = Enemy $ createEnemy Turtle (x', y')
       | c == "8" = Enemy $ createEnemy Shark (x', y')
       | c == "9" = Enemy $ createEnemy RedShark (x', y')
+      | c == "T" = Item $ createItem BigChest (x', y')
       | otherwise = error "invalid csv"
       where
         x' = fromIntegral x * 50 + 25 - (screenWidth / 2)

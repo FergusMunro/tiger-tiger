@@ -14,9 +14,11 @@ window = FullScreen
 main :: IO ()
 main = do
   player <- loadBMP "./resources/sprites/player.bmp"
+  ascendingPlayer <- loadBMP "./resources/sprites/ascendingplayer.bmp"
   bg <- loadBMP "./resources/sprites/background.bmp"
   oxygen <- loadBMP "./resources/sprites/oxygen.bmp"
   treasure <- loadBMP "./resources/sprites/treasure.bmp"
+  bigTreasure <- loadBMP "./resources/sprites/bigtreasure.bmp"
   powerup <- loadBMP "./resources/sprites/powerup.bmp"
   crystal <- loadBMP "./resources/sprites/crystal.bmp"
   block <- loadBMP "./resources/sprites/block.bmp"
@@ -41,5 +43,5 @@ main = do
 
   let startingWorld' = setMaps startingWorld mapList
 
-  let ss = SpriteSheet player [shark0, shark1] [jellyFish0, jellyFish1] [redShark0, redShark1] [turtle0, turtle1] bg oxygen treasure powerup crystal block
+  let ss = SpriteSheet player ascendingPlayer [shark0, shark1] [jellyFish0, jellyFish1] [redShark0, redShark1] [turtle0, turtle1] bg oxygen treasure bigTreasure powerup crystal block
   play window backgroundColor steps startingWorld' (drawGame ss) inputs step

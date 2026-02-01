@@ -4,6 +4,7 @@ import Graphics.Gloss
 
 data SpriteSheet = SpriteSheet
   { playerSprite :: Picture,
+    ascendingPlayerSprite :: Picture,
     sharkSprites :: [Picture],
     jellyFishSprites :: [Picture],
     redSharkSprites :: [Picture],
@@ -11,6 +12,7 @@ data SpriteSheet = SpriteSheet
     backgroundSprite :: Picture,
     oxygenSprite :: Picture,
     treasureSprite :: Picture,
+    bigTreasureSprite :: Picture,
     powerUpSprite :: Picture,
     crystalSprite :: Picture,
     blockSprite :: Picture

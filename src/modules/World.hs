@@ -25,7 +25,7 @@ instance Draw Button where
 startGameButton :: Button
 startGameButton = Button 0 0 750 110 "Start Game" initialiseGame
   where
-    initialiseGame (Menu m) = Game $ addMap (GameState startingPlayer [] [] [] 0 0 0 (mapsMenu m)) 0 (head $ mapsMenu m)
+    initialiseGame (Menu m) = Game $ addMap (GameState startingPlayer [] [] [] 0 0 0 (mapsMenu m) Descending) 0 (head $ mapsMenu m)
 
 quitGameButton :: Button
 quitGameButton = Button 0 (-200) 750 110 "Exit" (\_ -> error "quit game successfully") -- this is really naughty but realistically shouldn't be a problem
@@ -39,6 +39,8 @@ setMaps (Game g) maps = Game $ g {maps = maps}
 
 data MenuState = MenuState {selected :: Int, buttons :: [Button], mapsMenu :: [Map]}
 
+data GamePhase = Ascending | Descending deriving (Eq)
+
 data GameState = GameState
   { player :: Player,
     enemies :: [Enemy],
@@ -47,12 +49,15 @@ data GameState = GameState
     score :: Int,
     treasures :: Int,
     depth :: Float,
-    maps :: [Map]
+    maps :: [Map],
+    gamePhase :: GamePhase
   }
 
 data State = Menu MenuState | Game GameState
 
 -- this function requires more information that it necessarily should, so we can use various bits of data for the random seed
+-- (right now it just uses depth though. a possibly better approach is to shuffle the list of maps in main
+-- as this allows true randomness without making anything awkward with IO)
 chooseRandomMap :: GameState -> Map
 chooseRandomMap g
   | depth g + startingMapHeight + endingMapHeight >= maxDepth = last $ maps g
@@ -65,6 +70,13 @@ chooseRandomMap g
 step :: Float -> State -> State
 step _ (Game g)
   | getHealth finalPlayer <= 0 = setMaps startingWorld (maps g) -- go back to the menu, not forgetting to inject maps back in
+  | depth g <= (-(screenHeight / 2)) = setMaps startingWorld (maps g)
+  | depth g <= 0 && gamePhase g == Ascending =
+      Game $
+        g
+          { player = translateShape (0, ascendingRate) (player g),
+            depth = depth g - ascendingRate
+          }
   | shouldLoadMap =
       Game $
         addMap updatedGame startingMapHeight (chooseRandomMap g)
@@ -79,15 +91,45 @@ step _ (Game g)
           treasures = finalTreasures,
           blocks = movedBlocks,
           items = finalItems,
-          depth = updatedDepth
+          depth = updatedDepth,
+          gamePhase = newPhase
         }
     (hit, damagedPlayer) = (playerDamage . playerMisc . playerMovement) (player g)
     movedPlayer = blockCollision damagedPlayer
 
+    powerUpPlayer =
+      if powerUpCollected
+        then makeInvulnerable movedPlayer
+        else movedPlayer
+
+    shouldRetract = retractAnchor powerUpPlayer
+
+    anchorPlayer =
+      if shouldRetract
+        then fastRetract powerUpPlayer
+        else powerUpPlayer
+
+    ascendingPlayer =
+      if bigChestCollected
+        then startAscent anchorPlayer
+        else anchorPlayer
+
+    finalPlayer = addHealth ascendingPlayer collectedOxygen
+
+    verticalChange
+      | gamePhase g == Ascending && depth g <= 0 = 0
+      | gamePhase g == Ascending = -ascendingRate
+      | depth g >= maxDepth = 0
+      | otherwise = descendingRate
+    {-
     verticalChange =
-      if depth g >= maxDepth
-        then 0
-        else descendingRate
+      if gamePhase g == Ascending
+        then (-ascendingRate)
+        else
+          if depth g >= maxDepth
+            then 0
+            else descendingRate
+    -}
 
     movedEnemies = map (enemyMisc . blockCollision . enemyMovement (getCentre $ player g) . translateShape (0, verticalChange)) (enemies g)
     movedBlocks = map (translateShape (0, verticalChange)) (blocks g)
@@ -107,42 +149,33 @@ step _ (Game g)
 
     finalTreasures = max 0 $ treasures g + collectedTreasure + (if hit then (-1) else 0)
 
-    updatedDepth :: Float
     updatedDepth = depth g + verticalChange
 
     -- do NOT use updated depth here, otherwise we skip first loading of map unless we set initial depth to (-1)
 
-    shouldLoadMap :: Bool
     shouldLoadMap =
-      floor (depth g / mapHeight)
-        > floor ((depth g - verticalChange) / mapHeight)
-
-    powerUpPlayer =
-      if powerUpCollected
-        then makeInvulnerable movedPlayer
-        else movedPlayer
-
-    retractAnchor :: Player -> Bool
-    retractAnchor p = any (isAttacking p) movedBlocks || any (isBlocking $ getAttackDirection p) attackedEnemies
-
-    shouldRetract = retractAnchor powerUpPlayer
-
-    anchorPlayer =
-      if shouldRetract
-        then fastRetract powerUpPlayer
-        else powerUpPlayer
-
-    finalPlayer = addHealth anchorPlayer collectedOxygen
+      gamePhase g == Descending
+        && floor (depth g / mapHeight)
+          > floor ((depth g - verticalChange) / mapHeight)
 
     (collectedItems, finalItems) = partition (areIntersecting movedPlayer) movedItems
 
-    (itemScore, collectedTreasure, collectedOxygen, powerUpCollected) = foldr f (0, 0, 0, False) collectedItems
+    (itemScore, collectedTreasure, collectedOxygen, powerUpCollected, bigChestCollected) = foldr f (0, 0, 0, False, False) collectedItems
       where
-        f i (s, t, o, b) = case itemType i of
-          Crystal -> (s + crystalScore, t, o, b)
-          Treasure -> (s, t + 1, o, b)
-          PowerUp -> (s + powerUpScore, t, o, True)
-          OxygenTank -> (s, t, o + 1, True)
+        f i (s, t, o, p, b) = case itemType i of
+          Crystal -> (s + crystalScore, t, o, p, b)
+          Treasure -> (s, t + 1, o, p, b)
+          PowerUp -> (s + powerUpScore, t, o, True, b)
+          OxygenTank -> (s, t, o + 1, p, b)
+          BigChest -> (s, t, o, p, True)
+
+    newPhase =
+      if bigChestCollected
+        then Ascending
+        else gamePhase g
+
+    retractAnchor :: Player -> Bool
+    retractAnchor p = any (isAttacking p) movedBlocks || any (isBlocking $ getAttackDirection p) attackedEnemies
 
     blockCollision :: (Shape a) => a -> a
     blockCollision x = moveOutofBlocks x (intersectingBlocks x movedBlocks)
@@ -262,6 +295,9 @@ inputs _ s = s
 
 -- NOTE: important constants
 --
+ascendingRate :: Float
+ascendingRate = 4
+
 descendingRate :: Float
 descendingRate = 1.5
 
@@ -281,7 +317,7 @@ startingMapHeight :: Float
 startingMapHeight = 1000
 
 numMaps :: Float
-numMaps = 3
+numMaps = 0
 
 endingMapHeight :: Float
 endingMapHeight = 1000

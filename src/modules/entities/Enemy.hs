@@ -21,15 +21,11 @@ data Enemy = Enemy {enemyX :: Float, enemyY :: Float, health :: Int, enemyType :
 
 instance Draw Enemy where
   draw ss e = case enemyType e of
-    Jellyfish -> Translate (enemyX e) (enemyY e) $ Pictures [Scale 3 3 $ jellyFishSprites ss !! spriteIndex, Color c $ rectangleWire jellyfishWidth jellyfishHeight]
-    Turtle -> Translate (enemyX e) (enemyY e) $ Scale (-getDirection e) 1 $ Pictures [Scale 3 3 $ turtleSprites ss !! spriteIndex, Color c $ rectangleWire turtleWidth turtleHeight]
-    Shark -> Translate (enemyX e) (enemyY e) $ Scale (-getDirection e) 1 $ Pictures [Scale 3 3 $ sharkSprites ss !! spriteIndex, Color c $ rectangleWire sharkWidth sharkHeight]
-    RedShark -> Translate (enemyX e) (enemyY e) $ Scale (-getDirection e) 1 $ Pictures [Scale 3 3 $ redSharkSprites ss !! spriteIndex, Color c $ rectangleWire sharkWidth sharkHeight]
+    Jellyfish -> Translate (enemyX e) (enemyY e) $ Pictures [Scale 3 3 $ jellyFishSprites ss !! spriteIndex]
+    Turtle -> Translate (enemyX e) (enemyY e) $ Scale (-getDirection e) 1 $ Pictures [Scale 3 3 $ turtleSprites ss !! spriteIndex]
+    Shark -> Translate (enemyX e) (enemyY e) $ Scale (-getDirection e) 1 $ Pictures [Scale 3 3 $ sharkSprites ss !! spriteIndex]
+    RedShark -> Translate (enemyX e) (enemyY e) $ Scale (-getDirection e) 1 $ Pictures [Scale 3 3 $ redSharkSprites ss !! spriteIndex]
     where
-      c = case eDamageState e of
-        Vulnerable -> red
-        Invulnerable _ -> blue
-
       spriteIndex :: Int
       spriteIndex = case enemyType e of
         Jellyfish -> (enemyTimer e `div` jellyAnimationLength) `mod` 2

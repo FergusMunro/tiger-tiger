@@ -12,6 +12,7 @@ module Player
     directRight,
     fastRetract,
     makeInvulnerable,
+    startAscent,
   )
 where
 
@@ -24,16 +25,27 @@ import Shape
 
 -- player code
 
-data Player = Player {playerX :: Float, playerY :: Float, hp :: Int, direction :: Direction, anchor :: Anchor, pDamageState :: DamageState}
+data PlayerPhase = Ascending | Descending
+
+data Player = Player
+  { playerX :: Float,
+    playerY :: Float,
+    hp :: Int,
+    direction :: Direction,
+    anchor :: Anchor,
+    pDamageState :: DamageState,
+    playerPhase :: PlayerPhase
+  }
 
 instance Draw Player where
   draw ss p =
+    -- TODO:
     Translate (playerX p) (playerY p) $
-      Pictures [Scale 2.5 2.5 $ playerSprite ss, Color c $ rectangleWire playerWidth playerHeight, draw ss (anchor p)]
+      Pictures [Scale 2.5 2.5 sprite, draw ss (anchor p)]
     where
-      c = case pDamageState p of
-        Vulnerable -> red
-        Invulnerable _ -> blue
+      sprite = case playerPhase p of
+        Descending -> playerSprite ss
+        Ascending -> ascendingPlayerSprite ss
 
 instance Shape Player where
   getCoordinates p =
@@ -60,16 +72,21 @@ instance Damageable Player where
   addHealth p h = p {hp = hp p + h}
 
 startingPlayer :: Player
-startingPlayer = Player 0 0 4 (Direction 0 0) Retracted Vulnerable
+startingPlayer = Player 0 0 4 (Direction 0 0) Retracted Vulnerable Descending
 
 -- player movement
 
 playerMovement :: Player -> Player
-playerMovement p =
-  p {playerX = boundX x', playerY = boundY y'}
+playerMovement p = case playerPhase p of
+  Descending -> p {playerX = boundX x', playerY = boundY y'}
+    where
+      x' = playerX p + horizontal * 7
+      y' = playerY p + vertical * 7
+  Ascending -> p {playerX = boundX x', playerY = boundY y'}
+    where
+      x' = playerX p + horizontal * 7
+      y' = playerY p + vertical * (if vertical == 1 then 10 else 5)
   where
-    x' = playerX p + horizontal * 7
-    y' = playerY p + vertical * 7
     Direction h v = direction p
     horizontal = fromIntegral h
     vertical = fromIntegral v
@@ -142,14 +159,16 @@ instance Shape AnchorPos where
   translateShape (x, y) (AnchorPos anchor (a, b)) = AnchorPos anchor (x + a, y + b)
 
 extend :: Player -> Player
-extend p = case anchor p of
-  Retracted -> p {anchor = Extended 0 d}
-  Extended _ _ -> p
-  where
-    d = case direction p of
-      Direction 1 0 -> Direction 1 0
-      Direction (-1) 0 -> Direction (-1) 0
-      Direction _ x -> Direction 0 x
+extend p = case playerPhase p of
+  Descending -> case anchor p of
+    Retracted -> p {anchor = Extended 0 d}
+    Extended _ _ -> p
+    where
+      d = case direction p of
+        Direction 1 0 -> Direction 1 0
+        Direction (-1) 0 -> Direction (-1) 0
+        Direction _ x -> Direction 0 x
+  Ascending -> p -- can't extend anchor when ascending
 
 getAttackDirection :: Player -> Direction
 getAttackDirection p = d
@@ -167,6 +186,9 @@ fastRetract p = p {anchor = a}
     a = case anchor p of
       Retracted -> Retracted
       Extended i d -> Extended (max i (anchorExtendedTime - i)) d
+
+startAscent :: Player -> Player
+startAscent p = p {playerPhase = Ascending}
 
 -- player direction interfaces
 directDown :: Player -> Player
