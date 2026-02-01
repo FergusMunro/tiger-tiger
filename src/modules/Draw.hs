@@ -4,8 +4,10 @@ import Graphics.Gloss
 
 data SpriteSheet = SpriteSheet
   { playerSprite :: Picture,
-    sharkSprite :: Picture,
-    jellyFishSprite :: Picture,
+    sharkSprites :: [Picture],
+    jellyFishSprites :: [Picture],
+    redSharkSprites :: [Picture],
+    turtleSprites :: [Picture],
     backgroundSprite :: Picture,
     oxygenSprite :: Picture,
     treasureSprite :: Picture,
@@ -38,3 +40,12 @@ backgroundSpriteWidth = 1024
 
 backgroundSpriteHeight :: Float
 backgroundSpriteHeight = 1280
+
+jellyAnimationLength :: Int
+jellyAnimationLength = 17
+
+sharkAnimationLength :: Int
+sharkAnimationLength = 30
+
+turtleAnimationLength :: Int
+turtleAnimationLength = 24

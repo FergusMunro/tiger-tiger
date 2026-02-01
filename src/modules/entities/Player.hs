@@ -5,6 +5,7 @@ module Player
     playerMisc,
     isAttacking,
     extend,
+    getAttackDirection,
     directDown,
     directLeft,
     directUp,
@@ -142,8 +143,18 @@ instance Shape AnchorPos where
 
 extend :: Player -> Player
 extend p = case anchor p of
-  Retracted -> p {anchor = Extended 0 (direction p)}
+  Retracted -> p {anchor = Extended 0 d}
   Extended _ _ -> p
+  where
+    d = case direction p of
+      Direction 1 0 -> Direction 1 0
+      Direction (-1) 0 -> Direction (-1) 0
+      Direction _ x -> Direction 0 x
+
+getAttackDirection :: Player -> Direction
+getAttackDirection p = d
+  where
+    Extended _ d = anchor p
 
 isAttacking :: (Shape a) => Player -> a -> Bool
 isAttacking p e = case anchor p of

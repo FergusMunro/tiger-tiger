@@ -89,10 +89,21 @@ step _ (Game g)
         then 0
         else descendingRate
 
-    movedEnemies = map (blockCollision . enemyMovement (getCentre $ player g) . translateShape (0, verticalChange)) (enemies g)
+    movedEnemies = map (enemyMisc . blockCollision . enemyMovement (getCentre $ player g) . translateShape (0, verticalChange)) (enemies g)
     movedBlocks = map (translateShape (0, verticalChange)) (blocks g)
     movedItems = map (translateShape (0, verticalChange)) (items g)
-    (enemyScore, finalEnemies) = enemyFilter . map (enemyMisc . enemyDamage) $ movedEnemies
+
+    -- partition on attacked enemies, then check if any block the attack, if so retract anchor and skip damage, otherwise damage all enemies, partition by is alive (map getscore on dead) then add back into main enemy list
+    (attackedEnemies, safeEnemies) = partition (isAttacking movedPlayer) movedEnemies
+
+    (finalEnemies, killedEnemies) =
+      if shouldRetract
+        then (safeEnemies ++ attackedEnemies, [])
+        else (safeEnemies ++ map (snd . damage) damaged, dead)
+      where
+        (damaged, dead) = partition isAlive attackedEnemies
+
+    enemyScore = sum $ map getScore killedEnemies
 
     finalTreasures = max 0 $ treasures g + collectedTreasure + (if hit then (-1) else 0)
 
@@ -111,8 +122,13 @@ step _ (Game g)
         then makeInvulnerable movedPlayer
         else movedPlayer
 
+    retractAnchor :: Player -> Bool
+    retractAnchor p = any (isAttacking p) movedBlocks || any (isBlocking $ getAttackDirection p) attackedEnemies
+
+    shouldRetract = retractAnchor powerUpPlayer
+
     anchorPlayer =
-      if any (isAttacking movedPlayer) movedBlocks
+      if shouldRetract
         then fastRetract powerUpPlayer
         else powerUpPlayer
 
@@ -146,19 +162,6 @@ step _ (Game g)
         f b p = translateShape v p
           where
             v = findMTV b p
-
-    enemyDamage :: Enemy -> Enemy
-    enemyDamage e
-      | isAttacking finalPlayer e = snd $ damage e
-      | otherwise = e
-
-    enemyFilter :: [Enemy] -> (Int, [Enemy])
-    enemyFilter = enemyFilter' (0, [])
-      where
-        enemyFilter' acc [] = acc
-        enemyFilter' (x, enemies) (e : es)
-          | isAlive e = enemyFilter' (x, e : enemies) es
-          | otherwise = enemyFilter' (x + getScore e, enemies) es
 step _ s = s
 
 addMap :: GameState -> Float -> Map -> GameState
@@ -260,7 +263,7 @@ inputs _ s = s
 -- NOTE: important constants
 --
 descendingRate :: Float
-descendingRate = 1
+descendingRate = 1.5
 
 crystalScore :: Int
 crystalScore = 100
