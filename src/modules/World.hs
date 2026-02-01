@@ -317,7 +317,7 @@ startingMapHeight :: Float
 startingMapHeight = 1000
 
 numMaps :: Float
-numMaps = 0
+numMaps = 3
 
 endingMapHeight :: Float
 endingMapHeight = 1000
