@@ -44,4 +44,5 @@ main = do
   let startingWorld' = setMaps startingWorld mapList
 
   let ss = SpriteSheet player ascendingPlayer [shark0, shark1] [jellyFish0, jellyFish1] [redShark0, redShark1] [turtle0, turtle1] bg oxygen treasure bigTreasure powerup crystal block
+
   play window backgroundColor steps startingWorld' (drawGame ss) inputs step
